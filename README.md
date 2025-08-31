@@ -38,6 +38,7 @@ A modern, web-based interface for managing GitLab merge requests efficiently. Bu
 
 ### 🔧 Advanced Features
 - **GitLab API Integration**: Real integration with GitLab API using python-gitlab
+- **Redis Caching**: 24-hour cache for labels, reviewers, and authors lists for faster rendering
 - **Label Management**: Add/remove labels directly from the interface
 - **MR Actions**: 
   - "Mark as Reviewed" button adds "Reviewed" label
@@ -64,6 +65,7 @@ A modern, web-based interface for managing GitLab merge requests efficiently. Bu
 - Git
 - GitLab instance (self-hosted or GitLab.com)
 - GitLab Personal Access Token
+- Redis (for caching functionality)
 
 ### Setup
 
@@ -84,20 +86,73 @@ A modern, web-based interface for managing GitLab merge requests efficiently. Bu
    pip install -r requirements.txt
    ```
 
-4. **Configure GitLab access**
+4. **Setup Redis (for caching)**
+   ```bash
+   # Option 1: Use the automated setup script
+   python setup_redis.py
+   
+   # Option 2: Manual Redis installation
+   # macOS:
+   brew install redis
+   brew services start redis
+   
+   # Ubuntu/Debian:
+   sudo apt-get update
+   sudo apt-get install redis-server
+   sudo systemctl start redis-server
+   
+   # Windows:
+   # Download Redis from https://redis.io/download
+   ```
+
+5. **Configure GitLab access**
    ```bash
    export GITLAB_TOKEN="your-gitlab-personal-access-token"
    export GITLAB_URL="https://git.csez.zohocorpin.com"  # Your GitLab instance URL
    export PROJECT_ID="16895"  # Your GitLab project ID
    ```
 
-5. **Run the application**
+6. **Run the application**
    ```bash
    python app.py
    ```
 
-6. **Access the application**
+7. **Access the application**
    Open your browser and navigate to `http://localhost:5001`
+
+## Redis Caching
+
+The application uses Redis to cache frequently accessed data for improved performance. The following endpoints are cached for 24 hours:
+
+- **`/api/labels`** - GitLab project labels
+- **`/api/reviewers`** - Available reviewers from MRs
+- **`/api/authors`** - MR authors
+
+### Cache Management
+
+The application provides several endpoints for cache management:
+
+- **`GET /api/cache/status`** - Check cache status and TTL for each cached endpoint
+- **`POST /api/cache/clear`** - Clear all cache data
+- **`POST /api/cache/clear/<type>`** - Clear specific cache type (labels/reviewers/authors)
+
+### Redis Configuration
+
+You can configure Redis connection settings using environment variables:
+
+```bash
+export REDIS_HOST='localhost'      # Redis server host (default: localhost)
+export REDIS_PORT='6379'           # Redis server port (default: 6379)
+export REDIS_DB='0'                # Redis database number (default: 0)
+export REDIS_PASSWORD=''           # Redis password (default: none)
+```
+
+### Cache Benefits
+
+- **Faster Page Loads**: Cached data loads instantly instead of making API calls
+- **Reduced API Calls**: Fewer requests to GitLab API, reducing rate limiting
+- **Better User Experience**: Smoother filtering and dropdown population
+- **Reduced Server Load**: Less processing required for frequently accessed data
 
 ## Configuration
 

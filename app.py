@@ -2,9 +2,11 @@ from flask import Flask, render_template, jsonify, request
 import os
 import subprocess
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import gitlab
+import redis
+import pickle
 
 app = Flask(__name__)
 
@@ -13,6 +15,12 @@ GITLAB_REPO_PATH = os.getenv('GITLAB_REPO_PATH', '/path/to/your/gitlab/repo')
 GITLAB_URL = os.getenv('GITLAB_URL', 'https://git.csez.zohocorpin.com')
 GITLAB_TOKEN = os.getenv('GITLAB_TOKEN', 'VJaybg9Leej4zscS_Xf4')
 PROJECT_ID = os.getenv('PROJECT_ID', '16895')
+
+# Redis Configuration
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+REDIS_DB = int(os.getenv('REDIS_DB', 0))
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', None)
 
 # Load environment variables from .env file if it exists
 try:
@@ -32,6 +40,64 @@ except Exception as e:
     print(f"Error connecting to GitLab: {e}")
     gl = None
     project = None
+
+# Initialize Redis client
+try:
+    redis_client = redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        db=REDIS_DB,
+        password=REDIS_PASSWORD,
+        decode_responses=False  # Keep as bytes for pickle compatibility
+    )
+    # Test connection
+    redis_client.ping()
+    print("Redis connection established successfully")
+except Exception as e:
+    print(f"Error connecting to Redis: {e}")
+    redis_client = None
+
+def get_cached_data(key):
+    """Get data from Redis cache"""
+    if redis_client is None:
+        return None
+    
+    try:
+        cached_data = redis_client.get(key)
+        if cached_data:
+            return pickle.loads(cached_data)
+        return None
+    except Exception as e:
+        print(f"Error getting cached data for key {key}: {e}")
+        return None
+
+def set_cached_data(key, data, expiry_hours=24):
+    """Set data in Redis cache with expiry"""
+    if redis_client is None:
+        return False
+    
+    try:
+        pickled_data = pickle.dumps(data)
+        redis_client.setex(key, expiry_hours * 3600, pickled_data)  # Convert hours to seconds
+        return True
+    except Exception as e:
+        print(f"Error setting cached data for key {key}: {e}")
+        return False
+
+def invalidate_cache(pattern):
+    """Invalidate cache entries matching a pattern"""
+    if redis_client is None:
+        return False
+    
+    try:
+        keys = redis_client.keys(pattern)
+        if keys:
+            redis_client.delete(*keys)
+            print(f"Invalidated {len(keys)} cache entries matching pattern: {pattern}")
+        return True
+    except Exception as e:
+        print(f"Error invalidating cache for pattern {pattern}: {e}")
+        return False
 
 def run_git_command(command, repo_path=None):
     """Run git command and return output"""
@@ -406,7 +472,15 @@ def get_mr_status_api(mr_id):
 
 @app.route('/api/labels')
 def get_labels():
-    """API endpoint to get all available labels"""
+    """API endpoint to get all available labels with Redis caching"""
+    cache_key = f"labels:{PROJECT_ID}"
+    
+    # Try to get from cache first
+    cached_labels = get_cached_data(cache_key)
+    if cached_labels is not None:
+        print(f"Returning cached labels for project {PROJECT_ID}")
+        return jsonify(cached_labels)
+    
     if project is None:
         labels = [
             {'name': 'feature', 'color': '#1d76db'},
@@ -421,12 +495,19 @@ def get_labels():
             {'name': 'auth', 'color': '#d73a4a'},
             {'name': 'duplicate', 'color': '#cfd3d7'}
         ]
+        # Cache the fallback data
+        set_cached_data(cache_key, labels, expiry_hours=24)
         return jsonify(labels)
     
     try:
         # Get all labels from the project
         labels = project.labels.list(per_page=50)
         label_data = [{'name': label.name, 'color': label.color} for label in labels]
+        
+        # Cache the data for 24 hours
+        set_cached_data(cache_key, label_data, expiry_hours=24)
+        print(f"Cached labels for project {PROJECT_ID}")
+        
         return jsonify(label_data)
     except Exception as e:
         print(f"Error fetching labels: {e}")
@@ -434,9 +515,20 @@ def get_labels():
 
 @app.route('/api/reviewers')
 def get_reviewers():
-    """API endpoint to get all available reviewers"""
+    """API endpoint to get all available reviewers with Redis caching"""
+    cache_key = f"reviewers:{PROJECT_ID}"
+    
+    # Try to get from cache first
+    cached_reviewers = get_cached_data(cache_key)
+    if cached_reviewers is not None:
+        print(f"Returning cached reviewers for project {PROJECT_ID}")
+        return jsonify(cached_reviewers)
+    
     if project is None:
-        return jsonify(['reviewer1', 'reviewer2'])
+        reviewers = ['reviewer1', 'reviewer2']
+        # Cache the fallback data
+        set_cached_data(cache_key, reviewers, expiry_hours=24)
+        return jsonify(reviewers)
     
     try:
         # Get all merge requests to extract unique reviewers
@@ -459,16 +551,33 @@ def get_reviewers():
                         if reviewer_name and reviewer_name != 'Unknown':
                             reviewer_names.add(reviewer_name)
         
-        return jsonify(list(reviewer_names))
+        reviewer_list = list(reviewer_names)
+        
+        # Cache the data for 24 hours
+        set_cached_data(cache_key, reviewer_list, expiry_hours=24)
+        print(f"Cached reviewers for project {PROJECT_ID}")
+        
+        return jsonify(reviewer_list)
     except Exception as e:
         print(f"Error fetching reviewers: {e}")
         return jsonify([])
 
 @app.route('/api/authors')
 def get_authors():
-    """API endpoint to get all MR authors"""
+    """API endpoint to get all MR authors with Redis caching"""
+    cache_key = f"authors:{PROJECT_ID}"
+    
+    # Try to get from cache first
+    cached_authors = get_cached_data(cache_key)
+    if cached_authors is not None:
+        print(f"Returning cached authors for project {PROJECT_ID}")
+        return jsonify(cached_authors)
+    
     if project is None:
-        return jsonify(['john.doe', 'jane.smith', 'alice.johnson', 'bob.wilson'])
+        authors = ['john.doe', 'jane.smith', 'alice.johnson', 'bob.wilson']
+        # Cache the fallback data
+        set_cached_data(cache_key, authors, expiry_hours=24)
+        return jsonify(authors)
     
     try:
         # Get all merge requests to extract unique authors
@@ -481,7 +590,13 @@ def get_authors():
                 if author_name and author_name != 'Unknown':
                     authors.add(author_name)
         
-        return jsonify(list(authors))
+        author_list = list(authors)
+        
+        # Cache the data for 24 hours
+        set_cached_data(cache_key, author_list, expiry_hours=24)
+        print(f"Cached authors for project {PROJECT_ID}")
+        
+        return jsonify(author_list)
     except Exception as e:
         print(f"Error fetching authors: {e}")
         return jsonify([])
@@ -579,6 +694,78 @@ def get_stats():
     """API endpoint to get MR statistics"""
     stats = get_mr_stats()
     return jsonify(stats)
+
+@app.route('/api/cache/clear', methods=['POST'])
+def clear_cache():
+    """API endpoint to clear all cache"""
+    try:
+        if redis_client is None:
+            return jsonify({'success': False, 'message': 'Redis not available'})
+        
+        # Clear all cache keys
+        redis_client.flushdb()
+        print("All cache cleared")
+        return jsonify({'success': True, 'message': 'All cache cleared successfully'})
+    except Exception as e:
+        print(f"Error clearing cache: {e}")
+        return jsonify({'success': False, 'message': f'Error clearing cache: {str(e)}'})
+
+@app.route('/api/cache/clear/<cache_type>', methods=['POST'])
+def clear_specific_cache(cache_type):
+    """API endpoint to clear specific cache types"""
+    try:
+        if redis_client is None:
+            return jsonify({'success': False, 'message': 'Redis not available'})
+        
+        if cache_type == 'labels':
+            pattern = f"labels:{PROJECT_ID}"
+        elif cache_type == 'reviewers':
+            pattern = f"reviewers:{PROJECT_ID}"
+        elif cache_type == 'authors':
+            pattern = f"authors:{PROJECT_ID}"
+        else:
+            return jsonify({'success': False, 'message': f'Invalid cache type: {cache_type}'})
+        
+        success = invalidate_cache(pattern)
+        if success:
+            return jsonify({'success': True, 'message': f'{cache_type} cache cleared successfully'})
+        else:
+            return jsonify({'success': False, 'message': f'Error clearing {cache_type} cache'})
+    except Exception as e:
+        print(f"Error clearing {cache_type} cache: {e}")
+        return jsonify({'success': False, 'message': f'Error clearing {cache_type} cache: {str(e)}'})
+
+@app.route('/api/cache/status')
+def cache_status():
+    """API endpoint to get cache status"""
+    try:
+        if redis_client is None:
+            return jsonify({'success': False, 'message': 'Redis not available'})
+        
+        # Get cache keys and their TTL
+        cache_info = {}
+        for cache_type in ['labels', 'reviewers', 'authors']:
+            key = f"{cache_type}:{PROJECT_ID}"
+            ttl = redis_client.ttl(key)
+            exists = ttl > 0
+            cache_info[cache_type] = {
+                'exists': exists,
+                'ttl_seconds': ttl if exists else None,
+                'ttl_hours': round(ttl / 3600, 2) if exists and ttl > 0 else None
+            }
+        
+        return jsonify({
+            'success': True,
+            'redis_connected': True,
+            'cache_info': cache_info
+        })
+    except Exception as e:
+        print(f"Error getting cache status: {e}")
+        return jsonify({
+            'success': False,
+            'redis_connected': False,
+            'message': f'Error getting cache status: {str(e)}'
+        })
 
 @app.route('/api/debug/mrs')
 def debug_mrs():
