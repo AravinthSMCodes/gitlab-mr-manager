@@ -7,6 +7,7 @@ import re
 import gitlab
 import redis
 import pickle
+from database import db_manager, insert_document, find_documents, find_one_document, update_document, delete_document, count_documents
 
 app = Flask(__name__)
 
@@ -770,6 +771,23 @@ def cache_status():
             'redis_connected': False,
             'message': f'Error getting cache status: {str(e)}'
         })
+
+@app.route('/api/database/status')
+def database_status():
+    """Get database connection status"""
+    try:
+        status = {
+            'mongodb': {
+                'connected': db_manager.is_connected(),
+                'collections': list(db_manager.collections.keys()) if db_manager.collections else []
+            },
+            'redis': {
+                'connected': redis_client is not None and redis_client.ping() if redis_client else False
+            }
+        }
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': f'Error getting database status: {e}'}), 500
 
 @app.route('/api/debug/mrs')
 def debug_mrs():

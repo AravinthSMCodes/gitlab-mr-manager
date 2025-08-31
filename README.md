@@ -66,6 +66,7 @@ A modern, web-based interface for managing GitLab merge requests efficiently. Bu
 - GitLab instance (self-hosted or GitLab.com)
 - GitLab Personal Access Token
 - Redis (for caching functionality)
+- MongoDB (for data persistence)
 
 ### Setup
 
@@ -100,9 +101,21 @@ A modern, web-based interface for managing GitLab merge requests efficiently. Bu
    sudo apt-get update
    sudo apt-get install redis-server
    sudo systemctl start redis-server
+   ```
+
+5. **Setup MongoDB (for data persistence)**
+   ```bash
+   # macOS:
+   brew install mongodb-community
+   brew services start mongodb-community
+   
+   # Ubuntu/Debian:
+   sudo apt-get update
+   sudo apt-get install mongodb
+   sudo systemctl start mongodb
    
    # Windows:
-   # Download Redis from https://redis.io/download
+   # Download and install from https://www.mongodb.com/try/download/community
    ```
 
 5. **Configure GitLab access**
@@ -147,12 +160,68 @@ export REDIS_DB='0'                # Redis database number (default: 0)
 export REDIS_PASSWORD=''           # Redis password (default: none)
 ```
 
+### MongoDB Configuration
+
+You can configure MongoDB connection settings using environment variables:
+
+```bash
+export MONGO_URI='mongodb://localhost:27017/'     # MongoDB connection URI (default: localhost)
+export MONGO_DB_NAME='gitlab_mr_manager'          # Database name (default: gitlab_mr_manager)
+export MONGO_USER=''                               # MongoDB username (optional)
+export MONGO_PASSWORD=''                           # MongoDB password (optional)
+```
+
+For MongoDB Atlas (cloud), use:
+```bash
+export MONGO_URI='mongodb+srv://cluster.mongodb.net/'
+export MONGO_USER='your_username'
+export MONGO_PASSWORD='your_password'
+```
+
 ### Cache Benefits
 
 - **Faster Page Loads**: Cached data loads instantly instead of making API calls
 - **Reduced API Calls**: Fewer requests to GitLab API, reducing rate limiting
 - **Better User Experience**: Smoother filtering and dropdown population
 - **Reduced Server Load**: Less processing required for frequently accessed data
+
+## MongoDB Database
+
+The application uses MongoDB for data persistence and future module features. The database includes the following collections:
+
+### Collections
+
+- **`users`** - User management and authentication
+- **`merge_requests`** - MR data and metadata
+- **`activities`** - User activity tracking
+- **`settings`** - Application configuration
+- **`notifications`** - User notifications
+- **`analytics`** - Usage analytics and metrics
+- **`cache`** - Database-level caching
+
+### Database Features
+
+- **Automatic Indexing**: Performance-optimized indexes for all collections
+- **Connection Management**: Robust connection handling with retry logic
+- **Error Handling**: Comprehensive error handling and logging
+- **CRUD Operations**: Full Create, Read, Update, Delete functionality
+- **Future-Ready**: Designed for upcoming features like user management, analytics, and notifications
+
+### Testing Database Connection
+
+Run the MongoDB test script to verify your setup:
+
+```bash
+python test_mongodb.py
+```
+
+### Database Status API
+
+Check database connection status via API:
+
+```bash
+curl http://localhost:5001/api/database/status
+```
 
 ## Configuration
 
