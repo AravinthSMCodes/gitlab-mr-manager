@@ -35,7 +35,9 @@ except ImportError:
 # Initialize GitLab client
 try:
     gl = gitlab.Gitlab(url=GITLAB_URL, private_token=GITLAB_TOKEN)
+    gl.auth()  # Explicit authentication
     project = gl.projects.get(PROJECT_ID)
+    print(f"GitLab connection successful! Project: {project.name}")
 except Exception as e:
     print(f"Error connecting to GitLab: {e}")
     gl = None
