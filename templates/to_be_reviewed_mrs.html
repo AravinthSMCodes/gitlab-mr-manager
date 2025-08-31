@@ -22,18 +22,36 @@
     <div class="filters">
         <div class="filter-group">
             <label class="filter-label">Author:</label>
-            <select name="author" class="filter-select" id="author-filter">
-                <option value="all">All Authors</option>
-                <!-- Authors will be loaded dynamically -->
-            </select>
+            <div class="searchable-dropdown" id="author-dropdown">
+                <select name="author" class="filter-select" id="author-filter">
+                    <option value="all">All Authors</option>
+                    <!-- Authors will be loaded dynamically -->
+                </select>
+                <div class="dropdown-content">
+                    <div class="dropdown-header">Search Authors</div>
+                    <input type="text" class="search-input" placeholder="Type to search authors..." id="author-search">
+                    <div class="dropdown-options" id="author-options">
+                        <!-- Options will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="filter-group">
             <label class="filter-label">Reviewer:</label>
-            <select name="reviewer" class="filter-select" id="reviewer-filter">
-                <option value="all">All Reviewers</option>
-                <!-- Reviewers will be loaded dynamically -->
-            </select>
+            <div class="searchable-dropdown" id="reviewer-dropdown">
+                <select name="reviewer" class="filter-select" id="reviewer-filter">
+                    <option value="all">All Reviewers</option>
+                    <!-- Reviewers will be loaded dynamically -->
+                </select>
+                <div class="dropdown-content">
+                    <div class="dropdown-header">Search Reviewers</div>
+                    <input type="text" class="search-input" placeholder="Type to search reviewers..." id="reviewer-search">
+                    <div class="dropdown-options" id="reviewer-options">
+                        <!-- Options will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="filter-group clear-filter-group">
@@ -148,13 +166,26 @@ function loadFilterOptions() {
         .then(response => response.json())
         .then(authors => {
             const authorSelect = document.getElementById('author-filter');
+            const authorOptions = document.getElementById('author-options');
+            
+            // Populate both select and dropdown options
             authors.forEach(author => {
+                // Add to select
                 const option = document.createElement('option');
                 option.value = author;
                 option.textContent = author;
                 authorSelect.appendChild(option);
+                
+                // Add to dropdown options
+                const dropdownOption = document.createElement('div');
+                dropdownOption.className = 'dropdown-option';
+                dropdownOption.dataset.value = author;
+                dropdownOption.textContent = author;
+                dropdownOption.onclick = () => selectOption('author', author);
+                authorOptions.appendChild(dropdownOption);
             });
-            // Set current author after loading options
+            
+            // Set current author if filtered
             setCurrentFilters();
         })
         .catch(error => console.error('Error loading authors:', error));
@@ -164,14 +195,30 @@ function loadFilterOptions() {
         .then(response => response.json())
         .then(reviewers => {
             const reviewerSelect = document.getElementById('reviewer-filter');
+            const reviewerOptions = document.getElementById('reviewer-options');
+            
+            // Populate both select and dropdown options
             reviewers.forEach(reviewer => {
+                // Add to select
                 const option = document.createElement('option');
                 option.value = reviewer;
                 option.textContent = reviewer;
                 reviewerSelect.appendChild(option);
+                
+                // Add to dropdown options
+                const dropdownOption = document.createElement('div');
+                dropdownOption.className = 'dropdown-option';
+                dropdownOption.dataset.value = reviewer;
+                dropdownOption.textContent = reviewer;
+                dropdownOption.onclick = () => selectOption('reviewer', reviewer);
+                reviewerOptions.appendChild(dropdownOption);
             });
-            // Set current reviewer after loading options
+            
+            // Set current reviewer if filtered
             setCurrentFilters();
+            
+            // Setup searchable dropdowns after all data is loaded
+            setupSearchableDropdowns();
         })
         .catch(error => console.error('Error loading reviewers:', error));
 
@@ -264,6 +311,154 @@ function applyLabelColors(labels) {
             labelElement.style.color = textColor;
             labelElement.style.border = 'none';
         }
+    });
+}
+
+// Setup searchable dropdown functionality
+function setupSearchableDropdowns() {
+    const dropdowns = ['author', 'reviewer'];
+    
+    dropdowns.forEach(type => {
+        const dropdown = document.getElementById(`${type}-dropdown`);
+        const select = document.getElementById(`${type}-filter`);
+        const searchInput = document.getElementById(`${type}-search`);
+        
+        // Toggle dropdown on select click
+        select.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeAllDropdowns();
+            dropdown.classList.add('active');
+            searchInput.focus();
+        });
+        
+        // Handle search input
+        searchInput.addEventListener('input', (e) => {
+            filterDropdownOptions(type, e.target.value);
+        });
+        
+        // Handle keyboard navigation
+        searchInput.addEventListener('keydown', (e) => {
+            handleDropdownKeyboard(type, e);
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+    });
+}
+
+// Filter dropdown options based on search input
+function filterDropdownOptions(type, searchTerm) {
+    const options = document.querySelectorAll(`#${type}-options .dropdown-option`);
+    const noResults = document.querySelector(`#${type}-options .no-results`);
+    
+    let hasVisibleOptions = false;
+    
+    options.forEach(option => {
+        const text = option.textContent.toLowerCase();
+        const matches = text.includes(searchTerm.toLowerCase());
+        option.style.display = matches ? 'block' : 'none';
+        if (matches) hasVisibleOptions = true;
+    });
+    
+    // Show/hide no results message
+    if (!hasVisibleOptions && searchTerm) {
+        if (!noResults) {
+            const noResultsDiv = document.createElement('div');
+            noResultsDiv.className = 'no-results';
+            noResultsDiv.textContent = 'No results found';
+            document.getElementById(`${type}-options`).appendChild(noResultsDiv);
+        }
+    } else if (noResults) {
+        noResults.remove();
+    }
+}
+
+// Handle keyboard navigation in dropdowns
+function handleDropdownKeyboard(type, event) {
+    const options = document.querySelectorAll(`#${type}-options .dropdown-option:not([style*="display: none"])`);
+    const currentSelected = document.querySelector(`#${type}-options .dropdown-option.selected`);
+    
+    switch (event.key) {
+        case 'ArrowDown':
+            event.preventDefault();
+            if (currentSelected) {
+                currentSelected.classList.remove('selected');
+                const nextIndex = Array.from(options).indexOf(currentSelected) + 1;
+                if (nextIndex < options.length) {
+                    options[nextIndex].classList.add('selected');
+                } else {
+                    options[0].classList.add('selected');
+                }
+            } else if (options.length > 0) {
+                options[0].classList.add('selected');
+            }
+            break;
+            
+        case 'ArrowUp':
+            event.preventDefault();
+            if (currentSelected) {
+                currentSelected.classList.remove('selected');
+                const prevIndex = Array.from(options).indexOf(currentSelected) - 1;
+                if (prevIndex >= 0) {
+                    options[prevIndex].classList.add('selected');
+                } else {
+                    options[options.length - 1].classList.add('selected');
+                }
+            } else if (options.length > 0) {
+                options[options.length - 1].classList.add('selected');
+            }
+            break;
+            
+        case 'Enter':
+            event.preventDefault();
+            if (currentSelected) {
+                selectOption(type, currentSelected.dataset.value);
+            }
+            break;
+            
+        case 'Escape':
+            event.preventDefault();
+            closeAllDropdowns();
+            break;
+    }
+}
+
+// Select an option from dropdown
+function selectOption(type, value) {
+    const select = document.getElementById(`${type}-filter`);
+    const dropdown = document.getElementById(`${type}-dropdown`);
+    const searchInput = document.getElementById(`${type}-search`);
+    
+    select.value = value;
+    updateDropdownDisplay(type, value);
+    dropdown.classList.remove('active');
+    searchInput.value = '';
+    
+    // Clear search results
+    filterDropdownOptions(type, '');
+    
+    // Apply filters
+    applyServerFilters();
+}
+
+// Update dropdown display text
+function updateDropdownDisplay(type, value) {
+    const select = document.getElementById(`${type}-filter`);
+    if (value && value !== 'all') {
+        select.textContent = value;
+    } else {
+        select.textContent = `All ${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+    }
+}
+
+// Close all dropdowns
+function closeAllDropdowns() {
+    document.querySelectorAll('.searchable-dropdown').forEach(dropdown => {
+        dropdown.classList.remove('active');
     });
 }
 

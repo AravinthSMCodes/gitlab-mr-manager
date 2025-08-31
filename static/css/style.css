@@ -710,6 +710,99 @@ body {
     visibility: hidden;
 }
 
+/* Searchable Dropdown Styles */
+.searchable-dropdown {
+    position: relative;
+    display: inline-block;
+    min-width: 200px;
+}
+
+.searchable-dropdown .filter-select {
+    width: 100%;
+    cursor: pointer;
+    position: relative;
+    background: white;
+}
+
+.searchable-dropdown .dropdown-content {
+    display: none;
+    position: absolute;
+    background: white;
+    min-width: 100%;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+    top: 100%;
+    left: 0;
+}
+
+.searchable-dropdown.active .dropdown-content {
+    display: block;
+}
+
+.searchable-dropdown .search-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+    outline: none;
+    background: #f9fafb;
+}
+
+.searchable-dropdown .search-input:focus {
+    background: white;
+    border-bottom-color: #3b82f6;
+}
+
+.searchable-dropdown .dropdown-options {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.searchable-dropdown .dropdown-option {
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.875rem;
+    transition: background-color 0.2s ease;
+}
+
+.searchable-dropdown .dropdown-option:hover {
+    background-color: #f3f4f6;
+}
+
+.searchable-dropdown .dropdown-option.selected {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.searchable-dropdown .dropdown-option:last-child {
+    border-bottom: none;
+}
+
+.searchable-dropdown .no-results {
+    padding: 0.75rem;
+    color: #6b7280;
+    font-style: italic;
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+.searchable-dropdown .dropdown-header {
+    padding: 0.5rem 0.75rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
 /* Animations */
 .fade-in {
     animation: fadeIn 0.5s ease-in;
