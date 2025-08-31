@@ -397,6 +397,7 @@ function getContrastColor(hexColor) {
 
 // Setup searchable dropdown functionality
 function setupSearchableDropdowns() {
+    console.log('setupSearchableDropdowns called');
     const dropdowns = ['author', 'label', 'reviewer'];
     
     dropdowns.forEach(type => {
@@ -404,8 +405,16 @@ function setupSearchableDropdowns() {
         const select = document.getElementById(`${type}-filter`);
         const searchInput = document.getElementById(`${type}-search`);
         
+        console.log(`Setting up ${type} dropdown:`, { dropdown: !!dropdown, select: !!select, searchInput: !!searchInput });
+        
+        if (!dropdown || !select || !searchInput) {
+            console.error(`Missing elements for ${type} dropdown`);
+            return;
+        }
+        
         // Toggle dropdown on select click
         select.addEventListener('click', (e) => {
+            console.log(`${type} dropdown clicked`);
             e.preventDefault();
             closeAllDropdowns();
             dropdown.classList.add('active');
@@ -510,9 +519,16 @@ function handleDropdownKeyboard(type, event) {
 
 // Select an option from dropdown
 function selectOption(type, value) {
+    console.log('selectOption called with:', type, value);
+    
     const select = document.getElementById(`${type}-filter`);
     const dropdown = document.getElementById(`${type}-dropdown`);
     const searchInput = document.getElementById(`${type}-search`);
+    
+    if (!select || !dropdown || !searchInput) {
+        console.error('Required elements not found:', { select: !!select, dropdown: !!dropdown, searchInput: !!searchInput });
+        return;
+    }
     
     select.value = value;
     updateDropdownDisplay(type, value);
@@ -526,6 +542,8 @@ function selectOption(type, value) {
     const reviewer = document.getElementById('reviewer-filter').value;
     const author = document.getElementById('author-filter').value;
     const label = document.getElementById('label-filter').value;
+    
+    console.log('Current filter values:', { reviewer, author, label });
     
     const currentUrl = new URL(window.location);
     
@@ -550,6 +568,8 @@ function selectOption(type, value) {
     
     // Reset to page 1 when filtering
     currentUrl.searchParams.delete('page');
+    
+    console.log('Redirecting to:', currentUrl.toString());
     window.location.href = currentUrl.toString();
 }
 
@@ -557,9 +577,21 @@ function selectOption(type, value) {
 function updateDropdownDisplay(type, value) {
     const select = document.getElementById(`${type}-filter`);
     if (value && value !== 'all') {
-        select.textContent = value;
+        // Find the option with this value and update the display
+        const option = select.querySelector(`option[value="${value}"]`);
+        if (option) {
+            // Update the first option (All Authors/All Labels/All Reviewers) to show selected value
+            const firstOption = select.querySelector('option[value="all"]');
+            if (firstOption) {
+                firstOption.textContent = value;
+            }
+        }
     } else {
-        select.textContent = `All ${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+        // Reset to default text
+        const firstOption = select.querySelector('option[value="all"]');
+        if (firstOption) {
+            firstOption.textContent = `All ${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+        }
     }
 }
 

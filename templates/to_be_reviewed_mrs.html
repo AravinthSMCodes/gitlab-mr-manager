@@ -469,9 +469,21 @@ function selectOption(type, value) {
 function updateDropdownDisplay(type, value) {
     const select = document.getElementById(`${type}-filter`);
     if (value && value !== 'all') {
-        select.textContent = value;
+        // Find the option with this value and update the display
+        const option = select.querySelector(`option[value="${value}"]`);
+        if (option) {
+            // Update the first option (All Authors/All Reviewers) to show selected value
+            const firstOption = select.querySelector('option[value="all"]');
+            if (firstOption) {
+                firstOption.textContent = value;
+            }
+        }
     } else {
-        select.textContent = `All ${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+        // Reset to default text
+        const firstOption = select.querySelector('option[value="all"]');
+        if (firstOption) {
+            firstOption.textContent = `All ${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+        }
     }
 }
 

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dropdown Test</title>
+    <style>
+        .searchable-dropdown {
+            position: relative;
+            display: inline-block;
+            width: 200px;
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .searchable-dropdown.active .dropdown-content {
+            display: block;
+        }
+        
+        .dropdown-header {
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-bottom: 1px solid #ddd;
+            outline: none;
+        }
+        
+        .dropdown-options {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .dropdown-option {
+            padding: 8px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .dropdown-option:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-option.selected {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .no-results {
+            padding: 8px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Searchable Dropdown Test</h1>
+    
+    <div class="searchable-dropdown" id="author-dropdown">
+        <select class="filter-select" id="author-filter">
+            <option value="all">All Authors</option>
+        </select>
+        <div class="dropdown-content">
+            <div class="dropdown-header">Search Authors</div>
+            <input type="text" class="search-input" placeholder="Type to search authors..." id="author-search">
+            <div class="dropdown-options" id="author-options">
+                <!-- Options will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+    
+    <br><br>
+    
+    <button onclick="testFilter()">Test Filter</button>
+    <div id="result"></div>
+    
+    <script>
+        // Test data
+        const authors = ['franto.ms', 'vishnu.vn', 'selvaraj.p', 'dilip.dk', 'vikram.c'];
+        
+        // Load test data
+        document.addEventListener('DOMContentLoaded', function() {
+            const authorSelect = document.getElementById('author-filter');
+            const authorOptions = document.getElementById('author-options');
+            
+            authors.forEach(author => {
+                // Add to select
+                const option = document.createElement('option');
+                option.value = author;
+                option.textContent = author;
+                authorSelect.appendChild(option);
+                
+                // Add to dropdown options
+                const dropdownOption = document.createElement('div');
+                dropdownOption.className = 'dropdown-option';
+                dropdownOption.dataset.value = author;
+                dropdownOption.textContent = author;
+                dropdownOption.onclick = () => selectOption('author', author);
+                authorOptions.appendChild(dropdownOption);
+            });
+            
+            setupSearchableDropdowns();
+        });
+        
+        function setupSearchableDropdowns() {
+            const dropdown = document.getElementById('author-dropdown');
+            const select = document.getElementById('author-filter');
+            const searchInput = document.getElementById('author-search');
+            
+            // Toggle dropdown on select click
+            select.addEventListener('click', (e) => {
+                e.preventDefault();
+                closeAllDropdowns();
+                dropdown.classList.add('active');
+                searchInput.focus();
+            });
+            
+            // Handle search input
+            searchInput.addEventListener('input', (e) => {
+                filterDropdownOptions('author', e.target.value);
+            });
+            
+            // Handle keyboard navigation
+            searchInput.addEventListener('keydown', (e) => {
+                handleDropdownKeyboard('author', e);
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            });
+        }
+        
+        function filterDropdownOptions(type, searchTerm) {
+            const options = document.querySelectorAll(`#${type}-options .dropdown-option`);
+            const noResults = document.querySelector(`#${type}-options .no-results`);
+            
+            let hasVisibleOptions = false;
+            
+            options.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                const matches = text.includes(searchTerm.toLowerCase());
+                option.style.display = matches ? 'block' : 'none';
+                if (matches) hasVisibleOptions = true;
+            });
+            
+            // Show/hide no results message
+            if (!hasVisibleOptions && searchTerm) {
+                if (!noResults) {
+                    const noResultsDiv = document.createElement('div');
+                    noResultsDiv.className = 'no-results';
+                    noResultsDiv.textContent = 'No results found';
+                    document.getElementById(`${type}-options`).appendChild(noResultsDiv);
+                }
+            } else if (noResults) {
+                noResults.remove();
+            }
+        }
+        
+        function handleDropdownKeyboard(type, event) {
+            const options = document.querySelectorAll(`#${type}-options .dropdown-option:not([style*="display: none"])`);
+            const currentSelected = document.querySelector(`#${type}-options .dropdown-option.selected`);
+            
+            switch (event.key) {
+                case 'ArrowDown':
+                    event.preventDefault();
+                    if (currentSelected) {
+                        currentSelected.classList.remove('selected');
+                        const nextIndex = Array.from(options).indexOf(currentSelected) + 1;
+                        if (nextIndex < options.length) {
+                            options[nextIndex].classList.add('selected');
+                        } else {
+                            options[0].classList.add('selected');
+                        }
+                    } else if (options.length > 0) {
+                        options[0].classList.add('selected');
+                    }
+                    break;
+                    
+                case 'ArrowUp':
+                    event.preventDefault();
+                    if (currentSelected) {
+                        currentSelected.classList.remove('selected');
+                        const prevIndex = Array.from(options).indexOf(currentSelected) - 1;
+                        if (prevIndex >= 0) {
+                            options[prevIndex].classList.add('selected');
+                        } else {
+                            options[options.length - 1].classList.add('selected');
+                        }
+                    } else if (options.length > 0) {
+                        options[options.length - 1].classList.add('selected');
+                    }
+                    break;
+                    
+                case 'Enter':
+                    event.preventDefault();
+                    if (currentSelected) {
+                        selectOption(type, currentSelected.dataset.value);
+                    }
+                    break;
+                    
+                case 'Escape':
+                    event.preventDefault();
+                    closeAllDropdowns();
+                    break;
+            }
+        }
+        
+        function selectOption(type, value) {
+            const select = document.getElementById(`${type}-filter`);
+            const dropdown = document.getElementById(`${type}-dropdown`);
+            const searchInput = document.getElementById(`${type}-search`);
+            
+            select.value = value;
+            updateDropdownDisplay(type, value);
+            dropdown.classList.remove('active');
+            searchInput.value = '';
+            
+            // Clear search results
+            filterDropdownOptions(type, '');
+            
+            document.getElementById('result').textContent = `Selected: ${value}`;
+        }
+        
+        function updateDropdownDisplay(type, value) {
+            const select = document.getElementById(`${type}-filter`);
+            if (value && value !== 'all') {
+                // Find the option with this value and update the display
+                const option = select.querySelector(`option[value="${value}"]`);
+                if (option) {
+                    // Update the first option (All Authors) to show selected value
+                    const firstOption = select.querySelector('option[value="all"]');
+                    if (firstOption) {
+                        firstOption.textContent = value;
+                    }
+                }
+            } else {
+                // Reset to default text
+                const firstOption = select.querySelector('option[value="all"]');
+                if (firstOption) {
+                    firstOption.textContent = 'All Authors';
+                }
+            }
+        }
+        
+        function closeAllDropdowns() {
+            document.querySelectorAll('.searchable-dropdown').forEach(dropdown => {
+                dropdown.classList.remove('active');
+            });
+        }
+        
+        function testFilter() {
+            const value = document.getElementById('author-filter').value;
+            document.getElementById('result').textContent = `Current value: ${value}`;
+        }
+    </script>
+</body>
+</html>

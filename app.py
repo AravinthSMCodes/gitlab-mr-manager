@@ -267,6 +267,11 @@ def home():
     stats = get_mr_stats()
     return render_template('home.html', stats=stats)
 
+@app.route('/instructions')
+def instructions():
+    """Instructions page for searchable dropdowns"""
+    return render_template('instructions.html')
+
 @app.route('/open-mrs')
 def open_mrs():
     """Page showing all open MRs"""
