@@ -522,8 +522,35 @@ function selectOption(type, value) {
     // Clear search results
     filterDropdownOptions(type, '');
     
-    // Apply filters
-    applyServerFilters();
+    // Apply filters immediately
+    const reviewer = document.getElementById('reviewer-filter').value;
+    const author = document.getElementById('author-filter').value;
+    const label = document.getElementById('label-filter').value;
+    
+    const currentUrl = new URL(window.location);
+    
+    // Update URL parameters
+    if (reviewer && reviewer !== 'all') {
+        currentUrl.searchParams.set('reviewer', reviewer);
+    } else {
+        currentUrl.searchParams.delete('reviewer');
+    }
+    
+    if (author && author !== 'all') {
+        currentUrl.searchParams.set('author', author);
+    } else {
+        currentUrl.searchParams.delete('author');
+    }
+    
+    if (label && label !== 'all') {
+        currentUrl.searchParams.set('label', label);
+    } else {
+        currentUrl.searchParams.delete('label');
+    }
+    
+    // Reset to page 1 when filtering
+    currentUrl.searchParams.delete('page');
+    window.location.href = currentUrl.toString();
 }
 
 // Update dropdown display text

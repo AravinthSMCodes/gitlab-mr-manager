@@ -441,8 +441,28 @@ function selectOption(type, value) {
     // Clear search results
     filterDropdownOptions(type, '');
     
-    // Apply filters
-    applyServerFilters();
+    // Apply filters immediately
+    const author = document.getElementById('author-filter').value;
+    const reviewer = document.getElementById('reviewer-filter').value;
+    
+    const currentUrl = new URL(window.location);
+    
+    // Update URL parameters
+    if (author && author !== 'all') {
+        currentUrl.searchParams.set('author', author);
+    } else {
+        currentUrl.searchParams.delete('author');
+    }
+    
+    if (reviewer && reviewer !== 'all') {
+        currentUrl.searchParams.set('reviewer', reviewer);
+    } else {
+        currentUrl.searchParams.delete('reviewer');
+    }
+    
+    // Reset to page 1 when filtering
+    currentUrl.searchParams.delete('page');
+    window.location.href = currentUrl.toString();
 }
 
 // Update dropdown display text
