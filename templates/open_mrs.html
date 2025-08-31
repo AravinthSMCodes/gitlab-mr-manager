@@ -238,7 +238,7 @@ function loadFilterOptions() {
                 dropdownOption.className = 'dropdown-option';
                 dropdownOption.dataset.value = labelName;
                 dropdownOption.dataset.color = labelColor;
-                dropdownOption.innerHTML = `<span class="label-preview" style="background-color: ${labelColor}; color: ${getContrastColor(labelColor)}; padding: 2px 6px; border-radius: 3px; margin-right: 8px; font-size: 0.75rem;">${labelName}</span>${labelName}`;
+                dropdownOption.innerHTML = `<span class="label-preview" style="background-color: ${labelColor}; color: ${getContrastColor(labelColor)}; padding: 2px 6px; border-radius: 3px; margin-right: 8px; font-size: 0.75rem;">${labelName}</span>`;
                 dropdownOption.onclick = () => selectOption('label', labelName);
                 labelOptions.appendChild(dropdownOption);
             });
