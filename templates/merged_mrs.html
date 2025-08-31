@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Merged MRs - GitLab MR Manager{% endblock %}
+
+{% block breadcrumb %}
+<span>Merged MRs</span>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h1 class="card-title">Merged Merge Requests</h1>
+                <p class="card-subtitle">Recently merged changes and their impact</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-group">
+            <label class="filter-label">Author:</label>
+            <select name="author" class="filter-select" id="author-filter">
+                <option value="all">All Authors</option>
+                <!-- Authors will be loaded dynamically -->
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label class="filter-label">Reviewer:</label>
+            <select name="reviewer" class="filter-select" id="reviewer-filter">
+                <option value="all">All Reviewers</option>
+                <!-- Reviewers will be loaded dynamically -->
+            </select>
+        </div>
+        
+        <div class="filter-group clear-filter-group">
+            <label class="filter-label">&nbsp;</label>
+            <button class="btn btn-secondary" onclick="clearFilters()">
+                <i class="fas fa-times"></i>
+                Clear Filters
+            </button>
+        </div>
+    </div>
+
+    <!-- MR List -->
+    <div class="mr-list">
+        {% for mr in mrs %}
+        <div class="mr-item" data-mr-id="{{ mr.id }}" data-status="merged" data-web-url="{{ mr.web_url }}">
+            <div class="mr-header">
+                <div>
+                    <div class="mr-title">#{{ mr.id }} {{ mr.title }}</div>
+                    <div class="mr-author">by {{ mr.author }}</div>
+                </div>
+                <span class="status merged">Merged</span>
+            </div>
+            
+            <div class="mr-meta">
+                <span><i class="fas fa-calendar"></i> Created {{ mr.created_at }}</span>
+                <span><i class="fas fa-code-merge"></i> Merged {{ mr.merged_at }}</span>
+                <span><i class="fas fa-user"></i> by {{ mr.merged_by }}</span>
+            </div>
+            
+            <div class="mr-branches">
+                <span><i class="fas fa-code-branch"></i> {{ mr.source_branch }} → {{ mr.target_branch }}</span>
+            </div>
+            
+            <div class="mr-labels">
+                {% for label in mr.labels %}
+                <span class="label" data-label-name="{{ label }}">{{ label }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="mr-assignees">
+                <span style="color: #6b7280; font-size: 0.875rem;">Reviewers:</span>
+                {% for reviewer in mr.reviewers %}
+                <span class="assignee">{{ reviewer }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="mr-actions" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary" onclick="viewMR({{ mr.id }})">
+                    <i class="fas fa-eye"></i>
+                    View
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if has_prev %}
+        <a href="{{ url_for('merged_mrs', page=current_page-1, reviewer=current_reviewer, author=current_author) }}" class="page-link">&laquo; Previous</a>
+        {% endif %}
+        
+        {% for page_num in range(1, total_pages + 1) %}
+            {% if page_num == current_page %}
+            <span class="page-link active">{{ page_num }}</span>
+            {% elif page_num <= 3 or page_num > total_pages - 3 or (page_num >= current_page - 1 and page_num <= current_page + 1) %}
+            <a href="{{ url_for('merged_mrs', page=page_num, reviewer=current_reviewer, author=current_author) }}" class="page-link">{{ page_num }}</a>
+            {% elif page_num == 4 and current_page > 5 %}
+            <span class="page-link">...</span>
+            {% elif page_num == total_pages - 3 and current_page < total_pages - 4 %}
+            <span class="page-link">...</span>
+            {% endif %}
+        {% endfor %}
+        
+        {% if has_next %}
+        <a href="{{ url_for('merged_mrs', page=current_page+1, reviewer=current_reviewer, author=current_author) }}" class="page-link">Next &raquo;</a>
+        {% endif %}
+    </div>
+    
+    <div class="pagination-info">
+        Showing {{ (current_page - 1) * per_page + 1 }} to {{ [current_page * per_page, total_mrs] | min }} of {{ total_mrs }} MRs
+    </div>
+    {% endif %}
+
+    {% if not mrs %}
+    <div class="empty-state">
+        <i class="fas fa-code-merge"></i>
+        <h3>No Merged MRs</h3>
+        <p>There are currently no merged merge requests to display.</p>
+        <a href="{{ url_for('reviewed_mrs') }}" class="btn btn-primary">
+            <i class="fas fa-check-circle"></i>
+            Review MRs to Merge
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Load filter options when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadFilterOptions();
+    setCurrentFilters();
+});
+
+function loadFilterOptions() {
+    // Load authors
+    fetch('/api/authors')
+        .then(response => response.json())
+        .then(authors => {
+            const authorSelect = document.getElementById('author-filter');
+            authors.forEach(author => {
+                const option = document.createElement('option');
+                option.value = author;
+                option.textContent = author;
+                authorSelect.appendChild(option);
+            });
+            // Set current author after loading options
+            setCurrentFilters();
+        })
+        .catch(error => console.error('Error loading authors:', error));
+
+    // Load reviewers
+    fetch('/api/reviewers')
+        .then(response => response.json())
+        .then(reviewers => {
+            const reviewerSelect = document.getElementById('reviewer-filter');
+            reviewers.forEach(reviewer => {
+                const option = document.createElement('option');
+                option.value = reviewer;
+                option.textContent = reviewer;
+                reviewerSelect.appendChild(option);
+            });
+            // Set current reviewer after loading options
+            setCurrentFilters();
+        })
+        .catch(error => console.error('Error loading reviewers:', error));
+
+    // Load labels for color mapping
+    fetch('/api/labels')
+        .then(response => response.json())
+        .then(labels => {
+            // Apply colors to existing labels on the page
+            applyLabelColors(labels);
+        })
+        .catch(error => console.error('Error loading labels:', error));
+}
+
+function setCurrentFilters() {
+    // Set current filter values from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    const currentAuthor = urlParams.get('author');
+    const currentReviewer = urlParams.get('reviewer');
+    
+    if (currentAuthor) {
+        const authorSelect = document.getElementById('author-filter');
+        if (authorSelect) {
+            authorSelect.value = currentAuthor;
+        }
+    }
+    if (currentReviewer) {
+        const reviewerSelect = document.getElementById('reviewer-filter');
+        if (reviewerSelect) {
+            reviewerSelect.value = currentReviewer;
+        }
+    }
+}
+
+function applyServerFilters() {
+    const author = document.getElementById('author-filter').value;
+    const reviewer = document.getElementById('reviewer-filter').value;
+    
+    const params = new URLSearchParams();
+    if (author && author !== 'all') params.append('author', author);
+    if (reviewer && reviewer !== 'all') params.append('reviewer', reviewer);
+    
+    const url = '/merged-mrs' + (params.toString() ? '?' + params.toString() : '');
+    window.location.href = url;
+}
+
+function clearFilters() {
+    window.location.href = '/merged-mrs';
+}
+
+// Add event listeners for filter changes
+document.addEventListener('DOMContentLoaded', function() {
+    const authorFilter = document.getElementById('author-filter');
+    const reviewerFilter = document.getElementById('reviewer-filter');
+    
+    if (authorFilter) {
+        authorFilter.addEventListener('change', applyServerFilters);
+    }
+    if (reviewerFilter) {
+        reviewerFilter.addEventListener('change', applyServerFilters);
+    }
+    
+    // Apply label colors will be called after labels are loaded
+});
+
+function applyLabelColors(labels) {
+    // Create a map of label names to colors
+    const labelColorMap = {};
+    labels.forEach(label => {
+        if (typeof label === 'object' && label.name && label.color) {
+            labelColorMap[label.name] = label.color;
+        }
+    });
+    
+    // Apply colors to all label elements on the page
+    document.querySelectorAll('.label[data-label-name]').forEach(labelElement => {
+        const labelName = labelElement.getAttribute('data-label-name');
+        const color = labelColorMap[labelName];
+        
+        if (color) {
+            // Determine text color based on background color brightness
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            const textColor = brightness > 128 ? '#000000' : '#ffffff';
+            
+            labelElement.style.backgroundColor = color;
+            labelElement.style.color = textColor;
+            labelElement.style.border = 'none';
+        }
+    });
+}
+
+function viewMR(mrId) {
+    // Open MR in new tab or modal
+    window.open(`/mr/${mrId}`, '_blank');
+}
+</script>
+{% endblock %}

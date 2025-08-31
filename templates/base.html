@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GitLab MR Manager{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Mobile menu backdrop -->
+        <div class="mobile-backdrop"></div>
+        
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-code-branch"></i>
+                    <span>MR Manager</span>
+                </div>
+                <button class="mobile-menu-close" onclick="closeMobileMenu()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('home') }}" class="nav-link {% if request.endpoint == 'home' %}active{% endif %}">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('open_mrs') }}" class="nav-link {% if request.endpoint == 'open_mrs' %}active{% endif %}">
+                        <i class="fas fa-folder-open"></i>
+                        <span>All Open MRs</span>
+                        <span class="badge" id="open-badge">-</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('to_be_reviewed_mrs') }}" class="nav-link {% if request.endpoint == 'to_be_reviewed_mrs' %}active{% endif %}">
+                        <i class="fas fa-eye"></i>
+                        <span>To Be Reviewed</span>
+                        <span class="badge" id="to-be-reviewed-badge">-</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('reviewed_mrs') }}" class="nav-link {% if request.endpoint == 'reviewed_mrs' %}active{% endif %}">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Reviewed MRs</span>
+                        <span class="badge" id="reviewed-badge">-</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('good_to_merge_mrs') }}" class="nav-link {% if request.endpoint == 'good_to_merge_mrs' %}active{% endif %}">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span>Good to Merge</span>
+                        <span class="badge" id="gtm-badge">-</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('merged_mrs') }}" class="nav-link {% if request.endpoint == 'merged_mrs' %}active{% endif %}">
+                        <i class="fas fa-code-merge"></i>
+                        <span>Merged MRs</span>
+                        <span class="badge" id="merged-badge">-</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <button class="mobile-menu-toggle" onclick="openMobileMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="breadcrumb">
+                    {% block breadcrumb %}{% endblock %}
+                </div>
+                <div class="user-menu">
+                    <span class="user-name">Admin User</span>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </header>
+
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Load MR statistics on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(stats => {
+                    const openBadge = document.getElementById('open-badge');
+                    const toBeReviewedBadge = document.getElementById('to-be-reviewed-badge');
+                    const reviewedBadge = document.getElementById('reviewed-badge');
+                    const gtmBadge = document.getElementById('gtm-badge');
+                    const mergedBadge = document.getElementById('merged-badge');
+                    
+                    if (openBadge) {
+                        openBadge.textContent = stats.open || 0;
+                        openBadge.style.display = 'inline-block';
+                    }
+                    if (toBeReviewedBadge) {
+                        toBeReviewedBadge.textContent = stats.to_be_reviewed || 0;
+                        toBeReviewedBadge.style.display = 'inline-block';
+                    }
+                    if (reviewedBadge) {
+                        reviewedBadge.textContent = stats.reviewed || 0;
+                        reviewedBadge.style.display = 'inline-block';
+                    }
+                    if (gtmBadge) {
+                        gtmBadge.textContent = stats.good_to_merge || 0;
+                        gtmBadge.style.display = 'inline-block';
+                    }
+                    if (mergedBadge) {
+                        mergedBadge.textContent = stats.merged || 0;
+                        mergedBadge.style.display = 'inline-block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

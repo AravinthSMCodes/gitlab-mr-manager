@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}All Open MRs - GitLab MR Manager{% endblock %}
+
+{% block breadcrumb %}
+<span>All Open MRs</span>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="card">
+        <div class="card-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 class="card-title">All Open Merge Requests</h1>
+                    <p class="card-subtitle">All open merge requests</p>
+                </div>
+                <button class="btn btn-primary" onclick="openNewMR()">
+                    <i class="fas fa-plus"></i>
+                    New MR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-group">
+            <label class="filter-label">Author:</label>
+            <select name="author" class="filter-select" id="author-filter">
+                <option value="all">All Authors</option>
+                <!-- Authors will be loaded dynamically -->
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label class="filter-label">Label:</label>
+            <select name="label" class="filter-select" id="label-filter">
+                <option value="all">All Labels</option>
+                <!-- Labels will be loaded dynamically -->
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label class="filter-label">Reviewer:</label>
+            <select name="reviewer" class="filter-select" id="reviewer-filter">
+                <option value="all">All Reviewers</option>
+                <!-- Reviewers will be loaded dynamically -->
+            </select>
+        </div>
+        
+        <div class="filter-group clear-filter-group">
+            <label class="filter-label">&nbsp;</label>
+            <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                <i class="fas fa-times"></i>
+                Clear Filters
+            </button>
+        </div>
+    </div>
+
+    <!-- MR List -->
+    <div class="mr-list">
+        {% for mr in mrs %}
+        <div class="mr-item" data-mr-id="{{ mr.id }}" data-status="open" data-web-url="{{ mr.web_url }}">
+            <div class="mr-header">
+                <div>
+                    <div class="mr-title">#{{ mr.id }} {{ mr.title }}</div>
+                    <div class="mr-author">by {{ mr.author }}</div>
+                </div>
+                <span class="status open">Open</span>
+            </div>
+            
+            <div class="mr-meta">
+                <span><i class="fas fa-calendar"></i> Created {{ mr.created_at }}</span>
+                <span><i class="fas fa-clock"></i> Updated {{ mr.updated_at }}</span>
+            </div>
+            
+            <div class="mr-branches">
+                <span><i class="fas fa-code-branch"></i> {{ mr.source_branch }} → {{ mr.target_branch }}</span>
+            </div>
+            
+            <div class="mr-labels">
+                {% for label in mr.labels %}
+                <span class="label" data-label-name="{{ label }}">{{ label }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="mr-assignees">
+                <span style="color: #6b7280; font-size: 0.875rem;">Reviewers:</span>
+                {% for reviewer in mr.reviewers %}
+                <span class="assignee">{{ reviewer }}</span>
+                {% endfor %}
+                {% if not mr.reviewers %}
+                <span style="color: #9ca3af; font-style: italic;">No reviewers assigned</span>
+                {% endif %}
+            </div>
+            
+            <div class="mr-actions" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary" onclick="openMRDetails({{ mr.id }})">
+                    <i class="fas fa-eye"></i>
+                    View
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if has_prev %}
+        <a href="{{ url_for('open_mrs', page=current_page-1, reviewer=current_reviewer, author=current_author, label=current_label) }}" class="page-link">&laquo; Previous</a>
+        {% endif %}
+        
+        {% for page_num in range(1, total_pages + 1) %}
+            {% if page_num == current_page %}
+            <span class="page-link active">{{ page_num }}</span>
+            {% elif page_num <= 3 or page_num > total_pages - 3 or (page_num >= current_page - 1 and page_num <= current_page + 1) %}
+            <a href="{{ url_for('open_mrs', page=page_num, reviewer=current_reviewer, author=current_author, label=current_label) }}" class="page-link">{{ page_num }}</a>
+            {% elif page_num == 4 and current_page > 5 %}
+            <span class="page-link">...</span>
+            {% elif page_num == total_pages - 3 and current_page < total_pages - 4 %}
+            <span class="page-link">...</span>
+            {% endif %}
+        {% endfor %}
+        
+        {% if has_next %}
+        <a href="{{ url_for('open_mrs', page=current_page+1, reviewer=current_reviewer, author=current_author, label=current_label) }}" class="page-link">Next &raquo;</a>
+        {% endif %}
+    </div>
+    
+    <div class="pagination-info">
+        Showing {{ (current_page - 1) * per_page + 1 }} to {{ [current_page * per_page, total_mrs] | min }} of {{ total_mrs }} MRs
+    </div>
+    {% endif %}
+
+    {% if not mrs %}
+    <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <h3>No Open MRs</h3>
+        <p>There are currently no merge requests waiting for review.</p>
+        <button class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Create New MR
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Load filter options when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadFilterOptions();
+});
+
+function loadFilterOptions() {
+    // Load authors
+    fetch('/api/authors')
+        .then(response => response.json())
+        .then(authors => {
+            const authorSelect = document.getElementById('author-filter');
+            authors.forEach(author => {
+                const option = document.createElement('option');
+                option.value = author;
+                option.textContent = author;
+                authorSelect.appendChild(option);
+            });
+            
+            // Set current author if filtered
+            const currentAuthor = '{{ current_author or "" }}';
+            if (currentAuthor) {
+                authorSelect.value = currentAuthor;
+            }
+        })
+        .catch(error => console.error('Error loading authors:', error));
+
+    // Load labels
+    fetch('/api/labels')
+        .then(response => response.json())
+        .then(labels => {
+            const labelSelect = document.getElementById('label-filter');
+            labels.forEach(label => {
+                const option = document.createElement('option');
+                option.value = label.name || label;
+                option.textContent = label.name || label;
+                labelSelect.appendChild(option);
+            });
+            
+            // Set current label if filtered
+            const currentLabel = '{{ current_label or "" }}';
+            if (currentLabel) {
+                labelSelect.value = currentLabel;
+            }
+            
+            // Apply colors to existing labels on the page
+            applyLabelColors(labels);
+        })
+        .catch(error => console.error('Error loading labels:', error));
+
+    // Load reviewers
+    fetch('/api/reviewers')
+        .then(response => response.json())
+        .then(reviewers => {
+            const reviewerSelect = document.getElementById('reviewer-filter');
+            reviewers.forEach(reviewer => {
+                const option = document.createElement('option');
+                option.value = reviewer;
+                option.textContent = reviewer;
+                reviewerSelect.appendChild(option);
+            });
+            
+            // Set current reviewer if filtered
+            const currentReviewer = '{{ current_reviewer or "" }}';
+            if (currentReviewer) {
+                reviewerSelect.value = currentReviewer;
+            }
+            
+            // Add event listeners for filtering after all data is loaded
+            setupFilterEventListeners();
+        })
+        .catch(error => console.error('Error loading reviewers:', error));
+}
+
+function setupFilterEventListeners() {
+    // Add event listeners for filtering
+    const reviewerSelect = document.getElementById('reviewer-filter');
+    const authorSelect = document.getElementById('author-filter');
+    const labelSelect = document.getElementById('label-filter');
+    
+    if (reviewerSelect) {
+        reviewerSelect.addEventListener('change', applyServerFilters);
+    }
+    if (authorSelect) {
+        authorSelect.addEventListener('change', applyServerFilters);
+    }
+    if (labelSelect) {
+        labelSelect.addEventListener('change', applyServerFilters);
+    }
+}
+
+function applyServerFilters() {
+    const reviewer = document.getElementById('reviewer-filter').value;
+    const author = document.getElementById('author-filter').value;
+    const label = document.getElementById('label-filter').value;
+    
+    const currentUrl = new URL(window.location);
+    
+    // Update URL parameters
+    if (reviewer && reviewer !== 'all') {
+        currentUrl.searchParams.set('reviewer', reviewer);
+    } else {
+        currentUrl.searchParams.delete('reviewer');
+    }
+    
+    if (author && author !== 'all') {
+        currentUrl.searchParams.set('author', author);
+    } else {
+        currentUrl.searchParams.delete('author');
+    }
+    
+    if (label && label !== 'all') {
+        currentUrl.searchParams.set('label', label);
+    } else {
+        currentUrl.searchParams.delete('label');
+    }
+    
+    // Reset to page 1 when filtering
+    currentUrl.searchParams.delete('page');
+    window.location.href = currentUrl.toString();
+}
+
+function openNewMR() {
+    window.open('https://git.csez.zohocorpin.com/zohofinance/zohopages/page-builder/-/merge_requests/new', '_blank');
+}
+
+function clearFilters() {
+    // Reset all filter dropdowns to 'all'
+    document.getElementById('reviewer-filter').value = 'all';
+    document.getElementById('author-filter').value = 'all';
+    document.getElementById('label-filter').value = 'all';
+    
+    // Redirect to the base URL without any filter parameters
+    window.location.href = '/open-mrs';
+}
+
+function applyLabelColors(labels) {
+    // Create a map of label names to colors
+    const labelColorMap = {};
+    labels.forEach(label => {
+        if (typeof label === 'object' && label.name && label.color) {
+            labelColorMap[label.name] = label.color;
+        }
+    });
+    
+    // Apply colors to all label elements on the page
+    document.querySelectorAll('.label[data-label-name]').forEach(labelElement => {
+        const labelName = labelElement.getAttribute('data-label-name');
+        const color = labelColorMap[labelName];
+        
+        if (color) {
+            // Determine text color based on background color brightness
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            const textColor = brightness > 128 ? '#000000' : '#ffffff';
+            
+            labelElement.style.backgroundColor = color;
+            labelElement.style.color = textColor;
+            labelElement.style.border = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

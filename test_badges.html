@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badge Test</title>
+    <style>
+        .badge {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: auto;
+            display: inline-block !important;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Badge Test</h1>
+    
+    <div class="nav-item">
+        <span>All Open MRs</span>
+        <span class="badge" id="open-badge">-</span>
+    </div>
+    
+    <div class="nav-item">
+        <span>To Be Reviewed</span>
+        <span class="badge" id="to-be-reviewed-badge">-</span>
+    </div>
+    
+    <div class="nav-item">
+        <span>Reviewed MRs</span>
+        <span class="badge" id="reviewed-badge">-</span>
+    </div>
+    
+    <div class="nav-item">
+        <span>Good to Merge</span>
+        <span class="badge" id="gtm-badge">-</span>
+    </div>
+    
+    <div class="nav-item">
+        <span>Merged MRs</span>
+        <span class="badge" id="merged-badge">-</span>
+    </div>
+    
+    <script>
+        // Test the badge loading logic
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Loading badges...');
+            
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(stats => {
+                    console.log('Stats received:', stats);
+                    
+                    const openBadge = document.getElementById('open-badge');
+                    const toBeReviewedBadge = document.getElementById('to-be-reviewed-badge');
+                    const reviewedBadge = document.getElementById('reviewed-badge');
+                    const gtmBadge = document.getElementById('gtm-badge');
+                    const mergedBadge = document.getElementById('merged-badge');
+                    
+                    if (openBadge) {
+                        openBadge.textContent = stats.open || 0;
+                        openBadge.style.display = 'inline-block';
+                        console.log('Open badge updated:', stats.open);
+                    }
+                    if (toBeReviewedBadge) {
+                        toBeReviewedBadge.textContent = stats.to_be_reviewed || 0;
+                        toBeReviewedBadge.style.display = 'inline-block';
+                        console.log('To Be Reviewed badge updated:', stats.to_be_reviewed);
+                    }
+                    if (reviewedBadge) {
+                        reviewedBadge.textContent = stats.reviewed || 0;
+                        reviewedBadge.style.display = 'inline-block';
+                        console.log('Reviewed badge updated:', stats.reviewed);
+                    }
+                    if (gtmBadge) {
+                        gtmBadge.textContent = stats.good_to_merge || 0;
+                        gtmBadge.style.display = 'inline-block';
+                        console.log('GTM badge updated:', stats.good_to_merge);
+                    }
+                    if (mergedBadge) {
+                        mergedBadge.textContent = stats.merged || 0;
+                        mergedBadge.style.display = 'inline-block';
+                        console.log('Merged badge updated:', stats.merged);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                });
+        });
+    </script>
+</body>
+</html>

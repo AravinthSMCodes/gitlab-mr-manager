@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Home - GitLab MR Manager{% endblock %}
+
+{% block breadcrumb %}
+<span>Home</span>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard fade-in">
+    <!-- Welcome Section -->
+    <div class="card">
+        <div class="card-header">
+            <h1 class="card-title">Welcome to GitLab MR Manager</h1>
+            <p class="card-subtitle">Manage your merge requests efficiently with our streamlined interface</p>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-3" style="margin-top: 1.5rem;">
+        <div class="stats-card">
+            <div class="stats-number" style="color: #1e40af;">{{ stats.open if stats else 0 }}</div>
+            <div class="stats-label">Open MRs</div>
+            <small style="color: #6b7280;">Ready for review</small>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-number" style="color: #059669;">{{ stats.reviewed if stats else 0 }}</div>
+            <div class="stats-label">Reviewed MRs</div>
+            <small style="color: #6b7280;">Ready to merge</small>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-number" style="color: #d97706;">{{ stats.merged if stats else 0 }}</div>
+            <div class="stats-label">Merged MRs</div>
+            <small style="color: #6b7280;">This week</small>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-number" style="color: #16a34a;">{{ stats.good_to_merge if stats else 0 }}</div>
+            <div class="stats-label">Good to Merge</div>
+            <small style="color: #6b7280;">Ready for merge</small>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <h2 class="card-title">Quick Actions</h2>
+        </div>
+        <div class="card-body">
+            <div class="grid grid-2">
+                <a href="{{ url_for('open_mrs') }}" class="card" style="text-decoration: none; color: inherit;">
+                    <div class="card-body" style="text-align: center;">
+                        <i class="fas fa-folder-open" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
+                        <h3 style="margin-bottom: 0.5rem;">All Open MRs</h3>
+                        <p style="color: #6b7280;">View all open merge requests</p>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('to_be_reviewed_mrs') }}" class="card" style="text-decoration: none; color: inherit;">
+                    <div class="card-body" style="text-align: center;">
+                        <i class="fas fa-eye" style="font-size: 2rem; color: #f59e0b; margin-bottom: 1rem;"></i>
+                        <h3 style="margin-bottom: 0.5rem;">To Be Reviewed</h3>
+                        <p style="color: #6b7280;">MRs that need review</p>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('reviewed_mrs') }}" class="card" style="text-decoration: none; color: inherit;">
+                    <div class="card-body" style="text-align: center;">
+                        <i class="fas fa-check-circle" style="font-size: 2rem; color: #10b981; margin-bottom: 1rem;"></i>
+                        <h3 style="margin-bottom: 0.5rem;">Reviewed MRs</h3>
+                        <p style="color: #6b7280;">MRs that have been reviewed</p>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('good_to_merge_mrs') }}" class="card" style="text-decoration: none; color: inherit;">
+                    <div class="card-body" style="text-align: center;">
+                        <i class="fas fa-thumbs-up" style="font-size: 2rem; color: #16a34a; margin-bottom: 1rem;"></i>
+                        <h3 style="margin-bottom: 0.5rem;">Good to Merge</h3>
+                        <p style="color: #6b7280;">MRs ready for merge</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+            <h2 class="card-title">Recent Activity</h2>
+        </div>
+        <div class="card-body">
+            <div class="mr-list">
+                <div class="mr-item" style="cursor: default;">
+                    <div class="mr-header">
+                        <div>
+                            <div class="mr-title">MR #7 merged</div>
+                            <div class="mr-author">Add unit tests by edward.norton</div>
+                        </div>
+                        <span class="status merged">Merged</span>
+                    </div>
+                    <div class="mr-meta">
+                        <span>2 hours ago</span>
+                    </div>
+                </div>
+
+                <div class="mr-item" style="cursor: default;">
+                    <div class="mr-header">
+                        <div>
+                            <div class="mr-title">MR #4 approved</div>
+                            <div class="mr-author">Add API documentation by bob.wilson</div>
+                        </div>
+                        <span class="status reviewed">Reviewed</span>
+                    </div>
+                    <div class="mr-meta">
+                        <span>4 hours ago</span>
+                    </div>
+                </div>
+
+                <div class="mr-item" style="cursor: default;">
+                    <div class="mr-header">
+                        <div>
+                            <div class="mr-title">New MR #2 created</div>
+                            <div class="mr-author">Fix login page styling by jane.smith</div>
+                        </div>
+                        <span class="status open">Open</span>
+                    </div>
+                    <div class="mr-meta">
+                        <span>1 day ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
